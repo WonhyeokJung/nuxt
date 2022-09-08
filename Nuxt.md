@@ -4,7 +4,8 @@
 
 - React의 next.js보다 DX(Developer experience)가 훨씬 좋다.
 - 폴더를 통해 기능을 인식하기 때문에 폴더명을 정해진대로 입력해야 한다.
-- Vue.js처럼 app.vue를 이용할 수도 있고, app.vue 없이 구성하면 `pages/index.vue`를 홈페이지로 삼거나, `layouts/default.vue`를 기본화면으로 삼는다.
+- Vue.js처럼 app.vue를 이용할 수도 있고, app.vue 없이 구성하면 `pages/index.vue`를 홈페이지로 삼거나, `layouts/default.vue`를 기본화면으로 삼는다.(하지만, app.vue의 이용을 권장하는 것이 전역 css 등의 관리가 훨씬 용이하다.)
+- vue 페이지의 구성은 vue.js와 같으나 여러 편의성을 갖춘 문법이 추가되었다.
 
 
 
@@ -74,29 +75,41 @@
       <nuxt-link to="/signup">Sign Up</nuxt-link>
     </nav>
     <!-- Pages / Vue.js의 router-view -->
+    <!-- app.vue 사용시 NuxtPage는 app.vue 추천 -->
+    <!-- Grid 등으로 배치 조절할 때는 여기서 사용도 Ok! -->
     <NuxtPage />
   </div>
 </template>
 ```
+
+app.vue 사용시 예시
+
+```vue
+<!-- app.vue -->
+<template>
+	<NuxtLayout />
+	<NuxtPage />
+</template>
+```
+
+
 
 Custom layouts
 
 ```vue
 <template>
   <div>
-    {{ data }} page
   </div>
 </template>
 <script>
 definePageMeta({
-  layout: 'custom'
+  // 특정 layout 사용
+  layout: 'custom',
+  // layout 미사용
+  layout: false
 })
 export default {
   setup() {
-    const data = 'profile';
-    return {
-      data
-    }
   },
 }
 </script>
@@ -150,8 +163,9 @@ export default {
       // where `%s` is replaced with the title
       titleTemplate: '%s - Site Title',
       });
+      const route = useRoute();
       return {
-        dynamic: ref(77)
+        dynamic: route.name
       }
     },
 	}
@@ -159,7 +173,7 @@ export default {
 
 <!-- console 내 결과 -->
 <head>
-  <title>77 - Site Title</title>
+  <title>index - Site Title</title>
 </head>
 ```
 
