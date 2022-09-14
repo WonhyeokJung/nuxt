@@ -385,7 +385,7 @@ export default {
      "scripts": {
      	"build": "nuxt build",
      	"dev": "nuxt dev",
-     	// 모든 파일 검사
+     	// 모든폴더/모든파일 검사
      	"lint": "eslint '**/*'"
    	}
    }
