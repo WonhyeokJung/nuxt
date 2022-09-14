@@ -191,8 +191,6 @@ export default {
 
 > ESLint는 팀 프로젝트 혹은 개인 프로젝트에서 코드의 일관성을 유지시키는데 도움을 주고, 동일한 코딩 컨벤션 안에서 코드를 작성할 수 있도록 도와주는 유용한 정적 코드 분석 도구이다.
 
-### 사용법
-
 1. 개발용(원한다면 전체 적용도 가능하지만, eslint를 사용자가 요구할 경우는 없으므로 개발용으로 설친한다.)으로 eslint와 본인이 사용하는 언어/프레임워크에 맞는 플러그인을 설치한다.
    ```bash
    # -D : 개발자용, eslint-plugin-vue: vue전용 eslint 플러그인
@@ -399,3 +397,88 @@ export default {
    ```
    
    
+
+## 상태 관리 라이브러리의 적용
+
+> Vue.js의 대표적인 상태 관리 라이브러리로는 Vuex와 Pinia가 있다. Pinia는 OptionsAPI와 CompositionAPI 방식 모두의 작성법을 지원하는데, 아래에선 CompositionAPI 방식의 작성법을 소개하고 있다.
+> 자세한 사용 방법은 [Link](https://github.com/wonhyeokjung/pinia-n-vuex)참조
+
+Vuex는 Vue.js 초창기에 배포되어 높은 범용성을 가지고 있지만, Vue3의 Composition API와의 호환성이 좋지 못하고 Nuxt3에서 제대로 지원하지 않아 Vue3를 겨냥해 나온 Pinia를 상태 관리 라이브러리로 사용한다.
+
+### Installation
+
+```bash
+# pinia를 설치하지 않으면 에러가 발생한다.
+npm install pinia @pinia/nuxt
+```
+
+### nuxt.config.ts
+
+autoImports 옵션을 사용하면 각 컴포넌트에서 따로 import할 필요 없이 자동으로 import를 해준다.
+
+```typescript
+import { defineNuxtConfig } from 'nuxt';
+
+export default defineNuxtConfig({
+  // 전역 import할 npm modules(packages, libraries)
+  modules: [
+    [
+      '@pinia/nuxt',
+      {
+        // 전역 import할 변수/함수
+        autoImports: [
+          'defineStore',
+          ['defineStore', 'definePiniaStore'], // import { defineStore as definePiniaStore } from 'pinia'
+        ]
+      }
+    ] // @pinia/nuxt끝
+  ] // modules끝
+})
+```
+
+### Define a Store
+
+```javascript
+// ~/stores/STORE_NAME.js(.ts)
+export const useIndexStore = defineStore('index', () => {
+  const count = ref(0);
+  return {
+    count
+  }
+});
+```
+
+### Usage
+
+```vue
+<template>
+	<div>
+    <!-- 특정값이 아닌 값 전체를 불러오는 경우 Nuxt3에선 콘솔상 에러가 발생할 수 있으므로 유의할 것. -->
+    {{ indexStore }}
+  </div>
+</template>
+<script>
+	import { useIndexStore } from '~/stores/index';
+  export default {
+    setup() {
+      const indexStore = useIndexStore();
+      return {
+        indexStore
+      }
+    }
+  }
+</script>
+```
+
+### result
+
+```html
+<html>
+  <body>
+    <div>
+      { "$id": "index", "count": 0 }
+    </div>
+  </body>
+</html>
+```
+
