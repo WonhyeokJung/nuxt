@@ -187,3 +187,215 @@ export default {
 
 ```
 
+## Nuxt와 ESLint 연결
+
+> ESLint는 팀 프로젝트 혹은 개인 프로젝트에서 코드의 일관성을 유지시키는데 도움을 주고, 동일한 코딩 컨벤션 안에서 코드를 작성할 수 있도록 도와주는 유용한 정적 코드 분석 도구이다.
+
+### 사용법
+
+1. 개발용(원한다면 전체 적용도 가능하지만, eslint를 사용자가 요구할 경우는 없으므로 개발용으로 설친한다.)으로 eslint와 본인이 사용하는 언어/프레임워크에 맞는 플러그인을 설치한다.
+   ```bash
+   # -D : 개발자용, eslint-plugin-vue: vue전용 eslint 플러그인
+   npm i -D eslint eslint-plugin-vue @vue/eslint-config-standard
+   ```
+
+   ```json
+   // package.json
+   {
+     ...,
+     // 개발자용 패키지
+     "devDependencies": {
+     	"@vue/eslint-config-standard": "^8.0.1",
+     	"eslint": "^8.23.1",
+     	"eslint-plugin-vue": "^9.4.0",
+     	"nuxt": "3.0.0-rc.9"
+   	}
+   }
+   ```
+   
+2. ROOT폴더에 `.eslintrc`를 작성한다.
+   ```json
+   {
+     "root": true,
+     "parserOptions": {
+       "ecmaVersion": "latest",
+       "sourceType": "module"
+     },
+     "env": {
+       "browser": true,
+       "node": true,
+     },
+     "extends": [
+       // 치명적 오류 발생 가능한 코드 검증
+       "plugin:vue/vue3-essential",
+       "plugin:vue/"
+     ],
+     "plugins": [
+       
+     ],
+     "rules": {
+       
+     },
+     "globals": {
+       
+     }
+   }
+   ```
+   
+   1. `root: T/F`: 여러 세부 프로젝트가 내부에 있는 경우, 각 프로젝트 별로 린트 설정이 다를 수 있는데, root 옵션을 true로 주면 최상위 lint로 인식하여 하위 lint가 더이상 상위 폴더로 올라가면서 탐색하지 않는다.
+   
+   2. `plugins: ['PLUGIN_NAMES']`: 기본 규칙 외에 각 생태계에 맞는 추가적인 규칙을 추가해서 사용할 수 있다. 플러그인은 **규칙 활성화를 시키는 것은 아니며**, 단순히 규칙을 설정할 수 있도록 규칙 목록을 추가하기만 한다. 설정은 extends 혹은 rules를 이용하여 직접 설정해야 한다. 
+
+      ```bash
+      # React 설정 예시
+      npm i -D eslint-plugin-import eslint-plugin-react
+      ```
+   
+      ```json
+      "plugins": [
+        "import",
+        "react"
+      ]
+      ```
+   
+   3. `extends: ['EXTENDS_NAMES']`: Google, Facebook, Airbnb 등의 기업들 혹은 기타 npm 패키지 개발자들이 설정해둔 린트를 활성화할 수 있다. 이들이 미리 설정해둔 규칙이 활성화된다.
+   
+      ```json
+      // React 설정 예시 계속
+      "extends": [
+        "plugin:import/recommended",
+        "plugin:react/recommended"
+      ]
+      ```
+   
+      ```bash
+      # Vue airbnb 적용 예시
+      npm install airbnb-confgi-airbnb -D
+      npm install eslint-plugin-import -D
+      # prettier 설치
+      # npm i -D prettier
+      # npm i -D eslint-config-prettier eslint-plugin-prettier # ESLint와 통합 적용
+      ```
+   
+      ```json
+      "extends": [
+        "plugin:vue/essential",
+        "airbnb-base",
+        "@vue/prettier",
+        // prettier 적용. 맨 하단에 와야함에 유의.
+        "plugin:prettier/recommended"
+      ]
+      ```
+   
+   4. `rules: {.KEY: VALUE }`: extends에서 적용된 규칙들에 우선하여 규칙을 변경하거나 자신이 직접 규칙을 작성하고자 할 때 사용한다.이 규칙들은 위에서 설정한 extends 혹은 plugins 안에 정의되어 있어야 한다.
+      옵션은 아래와 같이 설정할 수 있다.
+   
+      - `"off" 또는 0` : 규칙을 비활성화한다.
+      - `"warn" 또는 1`: 규칙을 활성화하고, 규칙을 어긴 경우 경고한다.(Exit Code는 발생하지 않음.)
+      - `"error" 또는 2`: 규칙을 활성화하고, 규칙을 어긴 경우 에러를 발생시킨다.(Exit code가 일어난다.)
+   
+      ```json
+      // Vue.js 개인 설정 예시
+      "rules": {
+        // 둘 다 똑같이 동작한다.
+        "semi": "off",
+        "semi": 0,
+        
+        "space-before-function-paren": [
+              "error",
+              {
+                "anonymous": "always",
+                "named": "never"
+              }
+            ],
+      }
+      ```
+   
+   5. `env: {KEY: T/F}`: 각 실행환경(Runtime)에서 사용하는 전역 객체(`e.g.Browser의 windows`)를 통해 어떤 실행환경에서 접근 가능한 지 명시하여 접근하는 변수에서 발생하는 오류를 방지할 수 있다.(env에 선언하지 않은 실행환경의 전역객체에 접근한 경우 오류가 발생한다.)
+   
+      ```json
+      "env": {
+        "browser": true,
+        "node": true
+      }
+      ```
+   
+   6. `parser`와 `parserOptions`: ESLint는 기본적으로 순수 자바스크립트 코드만을 분석할 수 있으므로, 자신의 개발환경에 맞는 파서를 사용하도록 설정해야 한다.
+   
+      ```json
+      // TS와 JSX 설정 예시
+      "parser": "@typescript-eslint/parser",
+      "parserOptions": {
+        "sourceType": "module",
+        "ecmaFeatures": {
+          "jsx": true
+        },
+        "ecmaVersion": "latest"
+      }
+      ```
+      
+   6. `overide: [{ KEY: VALUE }]`: 프로젝트 내 일부 파일에만 다른 설정을 적용하고 싶은 경우 사용한다.
+   
+      ```json
+      // Typescript용 설정 적용 예시
+      "overrides": [
+        {
+          "files": "**/*.+(ts|tsx)",
+          "parser": "@typescript-eslint/parser",
+          "plugins": ["@typescript-eslint"],
+          "extends": ["plugin:@typescript-eslint/recommended"]
+        }
+      ]
+      ```
+      
+   6. `globals: {KEY: T/F}`: Vue 등에서 전역에 import하여 하위 컴포넌트에서 import가 필요없는 함수들이 있을 것이다. 하지만 ESLint는 `no-undef(undefined 에러)`를 일으키는데 이를 방지할 때 쓰는 것이 globals option이다. 선언한 변수/함수들을 마치 전역 변수인 것처럼 판단한다.
+   
+      ```json
+      "globals": {
+        // false로 처리한 것은 컴포넌트 내부에 import 되어 있지 않아도 no-undef 에러를 발생시키지 않는다.
+        "ref": false,
+        "reactive": false,
+        "toRefs": false,
+        "useHead": false,
+        "useRoute": false,
+        "definePageMeta": false
+      }
+      ```
+      
+      
+   
+2. ROOT DIRECTORY에 `.eslintignore` 생성
+   검색 대상에서 제외할 디렉토리/파일을 설정합니다.(위치는 현재 위치 기준)
+   
+   ```
+   assets/
+   package.json
+   package-lock.json
+   tsconfig.json
+   README.md
+   ```
+   
+2. `package.json`에 명령어 설정
+   설정한 ESLint로 분석할 코드의 범위를 설정한다.
+   
+   ```json
+   // package.json
+   {
+     ...,
+     "scripts": {
+     	"build": "nuxt build",
+     	"dev": "nuxt dev",
+     	// 모든 파일 검사
+     	"lint": "eslint '**/*'"
+   	}
+   }
+   ```
+   
+2. 실행
+   결과는 콘솔창에서 확인할 수 있다.
+   
+   ```bash
+   npm run lint
+   ```
+   
+   
