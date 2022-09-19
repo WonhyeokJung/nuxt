@@ -28,7 +28,10 @@
 
    
 
+## .nuxt
 
+`.nuxt`디렉토리에는 개발환경/배포환경으로 빌드한 결과물들이 전부 들어가 있다. 모듈, SSR, Router 설정 등이 전부 이곳에 빌드되어 작동하므로 빌드가 꼬인 경우 `.nuxt/`를 지우고 다시 빌드할 것.
+ `node_modules/`와 마찬가지로 `.gitignore`에서도 제외하는 것이 좋다.
 
 ## App.vue
 
@@ -476,9 +479,87 @@ export const useIndexStore = defineStore('index', () => {
 <html>
   <body>
     <div>
+      <!-- $id는 store 정의시에 할당한 첫번째 인자이다.-->
+      <!-- defineStore('$id', () => {}) -->
       { "$id": "index", "count": 0 }
     </div>
   </body>
 </html>
 ```
 
+### Pinia와 computed를 이용한 간단한 로그인 여부 확인
+
+```vue
+<template>
+	<div>
+    <div v-if="isLoggedIn">
+      로그인함.
+  	</div>
+    <div v-else>
+      로그인 요망.
+  	</div>
+  </div>
+</template>
+<script>
+	export default {
+    setup() {
+      const usersStore = useUsersStore();
+      const isLoggedIn = computed(() => usersStore.state.user);
+    }
+  }
+</script>
+```
+
+
+
+## Document is not defined Error
+
+Nuxt는 기본적으로 SSR(Server-side Rendering)이므로 `window.document`가 존재하지 않아 이 문제가 발생한다. 이를 해결하기 위해서는 다음과 같은 방법이 있다.
+
+1. process 객체 사용
+   process 객체에는 `{.dev: false, server: false, client: false }`가 담겨있고, process.client가 true인지 확인 후 작업을 진행하면 정상적으로 document를 인식한다.
+
+   ```vue
+   <template>
+   </template>
+   <script>
+   	if (process.client) {
+       // ... Do something !
+     }
+   </script>
+   ```
+
+2. onMounted 사용
+
+   `Vue.js의 onMounted`를 사용하면 정상적으로 document 인식이 가능하다.
+
+   ```vue
+   <template>
+   </template>
+   <script setup>
+     onMounted(() => {
+       import('something');
+     })
+   </script>
+   ```
+
+3. `<no-ssr>` tag 사용(Nuxt.js 3 지원여부 불명)
+
+   `<no-ssr>`내부의 컴포넌트는 CSR로 렌더링되어 SSR에서 나타나는 문제점을 회피할 수 있다.
+
+   내부에 선언한 컴포넌트에 `placeholder` slot을 사용하여 컴포넌트의 CSR이 끝날 때까지 보여줄 수도 있다.
+
+   ```vue
+   <template>
+   	<!-- use a text as placeholder -->
+   	<no-ssr placeholder="loading...">
+     	<!-- this component will only be rendered on client-side -->
+       <comments />
+       <!-- use a text as placeholder -->
+       <!-- no-ssr 내부의 placeholder slot에 내가 작성한 comments-placeholder 컴포넌트가 투입된다. -->
+       <comments-placeholder slot="placeholder" />
+     </no-ssr>
+   </template>
+   ```
+
+   
