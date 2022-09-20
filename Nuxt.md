@@ -168,7 +168,7 @@ export default {
       });
       const route = useRoute();
       return {
-        dynamic: route.name
+        dynamic: computed(() => route.name)
       }
     },
 	}
