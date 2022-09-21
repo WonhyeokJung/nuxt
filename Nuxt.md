@@ -562,4 +562,121 @@ Nuxt는 기본적으로 SSR(Server-side Rendering)이므로 `window.document`가
    </template>
    ```
 
-   
+
+
+
+# Vue
+
+## 회원가입
+
+### 에러 핸들링
+
+에러 핸들링에는 watchEffect를 사용하여 에러 객체의 각 에러메세지를 투입하였다. 이후 조건문을 통하여 class를 태그에 할당하고, 클래스별로 색상, 디스플레이 등을 다르게 주어 에러 메세지를 출력하게 했다.
+
+```vue
+<template>
+	<div :class="[errors.confirmPassword.value.length > 0 ? 'warning' : 'valid']">{{ errors.confirmPassword.value }}</div>
+</template>
+<script setup>
+  watchEffect(() => {
+    errors.email = /^[0-9a-zA-z]([-_.]?[0-9a-zA-Z])*@[0-9a-zA-Z]([-_.]?[0-9a-zA-Z])*\.[a-zA-Z]{2,4}$/.test(signUpForms.email) ? '' : '이메일 양식이 맞지 않습니다.';
+    errors.password =  /(?=.*\d)(?=.*[a-z])(?=.*[^A-Za-z0-9])(?=.*[A-Z]).{8,}/.test(signUpForms.password) ? '' : '비밀번호는 대소문자, 숫자 그리고 특수문자 최소 하나씩 포함하고 8자 이상이어야 합니다.';
+    // 일치 검사
+    errors.confirmPassword = (signUpForms.password === signUpForms.confirmPassword) ? '비밀번호가 일치합니다.' : '비밀번호가 일치하지 않습니다.';
+  });
+</script>
+<style>
+  .warning {
+    display: none;
+    font-size: 1.2rem;
+  }
+
+  .valid {
+    display: none;
+  }
+  input::placeholder {
+    opacity: 0;
+  }
+  /** 플레이스홀더가 보이지 않을 때 === 글자가 입력된 경우 */
+  input:not(:placeholder-shown) + .warning{
+    display: block;
+    color: red;
+  }
+</style>
+```
+
+### form 태그 내부의 v-on:invalid과 invalid의 처리
+
+`<form>`태그 내부에서 invalid가 발생하게 되면, 자동으로 `이 필드를 채우세요`라는 메세지가 발생하게 된다. 하지만, 브라우저 별로 디자인이 다를 뿐만 아니라 디자인 자체도 뛰어난 편은 아니라 보통 메세지를 제거하게 되는데, 이를 js로 처리하면 이와 같다.
+
+```vue
+<template>
+	<form ref="signupForm">
+    ...
+  </form>
+</template>
+<script setup>
+  // templates ref
+  const signupForm = ref(null);
+    onMounted(async () => {
+      await nextTick(() => {
+        // HttpCollection을 Array화 후 forEach로 탐색
+        Array.from(signupForm.value.children).forEach((tag) => {
+          if (tag.tagName === 'INPUT') {
+            tag.addEventListener('invalid', function (e) {
+              // e.preventDefault();
+              // invalid시 메세지출력이 이제 안되므로 특정 div에 클래스명 넣어 정보 입력 유도
+            });
+          }
+        });
+      });
+    });
+</script>
+```
+
+하지만 `templates ref`가 필수적이라는 단점과(Vue 공식문서에서는 ref의 사용을 되도록 회피하라고 안내하고 있다.) 더불어 아래와 같은 경우에는 INPUT을 하위 컴포넌트에서 찾는 과정을 한번 더 거쳐야 해서 매우 불편하다.
+
+```vue
+<template>
+	<form>
+    <label></label>
+    <input required>
+    <!-- input을 div 내에서 다시 검색해야 한다. -->
+    <div>
+      <label></label>
+      <input required>
+  	</div>
+  </form>
+</template>
+```
+
+그럴 때 사용할 수 있는 것이 v-on:invalid이다.
+
+- invalid : input이 검증을 통과 못했을 경우 동작
+- Prevent: prevent property는 `event.preventDefault()`와 같은 동작을 한다.
+
+```vue
+<template>
+	<form>
+    <label></label>
+    <input @invalid.prevent>
+  </form>
+</template>
+```
+
+
+
+### Form의 새로고침 문제와 v-on:submit.prevent
+
+위와 비슷한 문제로,`<form>` 태그의 경우 내부에서 submit시 기본 동작으로 새로고침을 실행하는데, 이를 방지하는 것이 `@submit.prevent=""`이다.
+
+```vue
+<template>
+	<!-- submit시 동작하며, 함수를 연결해 기존 button 등에서 실행하던 함수를 여기서 적용할 수 있다. -->
+	<!-- prevent는 기본 동작인 새로고침을 방지 -->
+	<form @submit.prevent="">
+    
+  </form>
+</template>
+```
+
