@@ -512,6 +512,87 @@ export const useIndexStore = defineStore('index', () => {
 
 
 
+## Plugin
+
+### Nuxt2 Style
+
+Nuxt2에선 하나의 js 파일에서 import로 불러온 여러 plugin을 동시에 적용하는 것이 가능했는데,
+
+Nuxt3에선 위와 같은 Nuxt2의 스타일을 지원하지 않을 예정이다.(콘솔 상의 경고 메세지를 확인 가능) 그러므로 아래와 같은 방식은 지양해야 한다.
+
+```javascript
+// ~/plugins/something.js
+export default function something {
+  return 'hello world'
+}
+
+// ~/nuxt.plugin.ts
+import something from '~/plugins/something'
+export default defineNuxtPlugin((/* nuxtApp */) => {
+  return {
+    provide: {
+      foo: something,
+      something
+    }
+  }
+});
+```
+
+### Nuxt3
+
+- 한 파일에서 export까지 마무리하는 것을 기본으로 한다.
+- 즉, 플러그인을 여러개 설정하면 각 플러그인에서 export하고, 그렇게 해도 정상작동한다.
+- `<template>` 내에서 사용할 때는 따로 구조분해할당이 필요없지만, `<script setup>`내에선 구조분해할당으로 불러온 후 사용이 가능하다.
+
+```javascript
+// ~/plugins/valid-check.js
+function isValid(target, value, value2=undefined) {
+  const errors = {
+    email: /^[0-9a-zA-z]([-_.]?[0-9a-zA-Z])*@[0-9a-zA-Z]([-_.]?[0-9a-zA-Z])*\.[a-zA-Z]{2,4}$/.test(value) ? '' : '이메일 양식이 맞지 않습니다.',
+    password: /(?=.*\d)(?=.*[a-z])(?=.*[^A-Za-z0-9])(?=.*[A-Z]).{8,}/.test(value) ? '' : '비밀번호는 대소문자, 숫자 그리고 특수문자 최소 하나씩 포함하고 8자 이상이어야 합니다.',
+    confirmPassword: (value === value2) ? '' : '비밀번호가 일치하지 않습니다.'
+  }
+
+  return errors[target];
+}
+
+export default defineNuxtPlugin((/* nuxtApp */) => {
+  return {
+    provide: {
+      // key값 할당
+      validCheck: isValid,
+      // key === value일시 생략도 가능
+      isValid
+    }
+  }
+});
+
+```
+
+```vue
+<template>
+	{{ $validCheck }}
+	{{ $isValid('email', 'a@a.com') }}
+</template>
+<script setup>
+	// 호출을 위해 구조분해할당을 할 필요가 없다.
+</script>
+```
+
+```vue
+<template>
+	{{ foo }}
+</template>
+<script setup>
+  // script 내 사용에선 구조분해할당이 필수이다.
+	const { $isValid, $validCheck } = useNuxtApp();
+  const foo = $isValid('email', 'a@a.com');
+  // 혹은 const foo = $validCheck('email', 'a@a.com');
+</script>
+```
+
+
+
 ## Document is not defined Error
 
 Nuxt는 기본적으로 SSR(Server-side Rendering)이므로 `window.document`가 존재하지 않아 이 문제가 발생한다. 이를 해결하기 위해서는 다음과 같은 방법이 있다.
