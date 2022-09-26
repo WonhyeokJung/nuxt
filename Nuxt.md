@@ -543,6 +543,7 @@ export default defineNuxtPlugin((/* nuxtApp */) => {
 - 한 파일에서 export까지 마무리하는 것을 기본으로 한다.
 - 즉, 플러그인을 여러개 설정하면 각 플러그인에서 export하고, 그렇게 해도 정상작동한다.
 - `<template>` 내에서 사용할 때는 따로 구조분해할당이 필요없지만, `<script setup>`내에선 구조분해할당으로 불러온 후 사용이 가능하다.
+- 사용 시에 **$**(이름 충돌 방지)를 붙여야 불러올 수 있음에 유의한다.
 
 ```javascript
 // ~/plugins/valid-check.js
@@ -571,6 +572,7 @@ export default defineNuxtPlugin((/* nuxtApp */) => {
 
 ```vue
 <template>
+	<!-- 호출명은 $ + 변수명임에 유의할 것. ->
 	{{ $validCheck }}
 	{{ $isValid('email', 'a@a.com') }}
 </template>
