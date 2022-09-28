@@ -58,7 +58,7 @@
 - Vue.js는 실제로는 페이지가 하나이지만 브라우저의 히스토리 API를 이용해서 컴포넌트를 바꿔치기 하는 방식이었다면(url 변경으로 바꿔치기), Nuxt는 진짜로 pages 내의 컴포넌트가 하나의 개별적인 페이지이다.(코드 스플리팅)
 - 즉, 코드 스플리팅으로 인해 SSR 방식이 적용되었으며 Vue.js의 CSR처럼 파일을 전부 불러오는게 아닌 페이지별로 불러오게 된다. CSR의 새 페이지 로딩시 페이지 깜빡임 등을 방지하기 위해 다음에 옮겨갈 페이지들을 미리 가져오는 기능도 적용되어 있다.
 
-## Layouts
+## layouts
 
 ### 특징
 
@@ -117,6 +117,115 @@ export default {
 }
 </script>
 ```
+
+## public
+
+변경되지 않을 파일들을 넣어두는 곳으로, 대표적으로 `favicon.ico` 등이 여기 들어가며, 자동 적용된다. 그 이외에 `public/favicon.ico` 등의 경로가 자동생성된다.
+
+- 경로 입력시 `/public`의 생략이 가능
+  ```html
+  <!-- public 디렉토리 사용시 -->
+  <img src="/my-image.png">
+  <!-- assets 사용시 -->
+  <img src="~/assets/my-image.png">
+
+### Favicon
+
+- `public` 디렉토리에 `favicon.ico` 파일을 넣어주기만 하면 자동으로 파비콘이 적용된다.
+
+## utils
+
+특정 기능을 수행하는 JS function들을 담는 디렉토리이다. 주로 여러 컴포넌트에서 반복적으로 사용하게 될 **비API** 함수가 있는 경우 utils에 담게 된다.
+
+`Composables`와 비슷하며  Composables가 template 등의 화면 구성 요소 + 컴포넌트 내 특정 변수의 전달도 수행한다면, utils는 단순히 특정 기능을 수행하는 함수들의 구성에 치중한다고 볼 수 있다. Vue3 / Nuxt3에서는 Composition API로도 작성이 가능하다.
+
+### 예시
+
+대표적인 예로 `Eventbus`가 있다.
+
+```javascript
+// ~/utils/bus.js
+export default function useEventBus() {
+  let eventsListeners = {};
+  /**
+   *
+   * @param {string} events event name
+   * @param {function} handler event handler
+   * @param {boolean} priority priority
+   * @returns object
+   */
+  function $on(events, handler, priority) {
+    if (typeof handler !== 'function') return;
+    const method = priority ? 'unshift' : 'push';
+    events.split(' ').forEach(event => {
+      if (!eventsListeners[event]) eventsListeners[event] = [];
+      eventsListeners[event][method](handler);
+    });
+    return;
+  }
+
+  function $off(events, handler) {
+    if (!eventsListeners) return self;
+    events.split(' ').forEach(event => {
+      if (typeof handler === 'undefined') eventsListeners[event] = [];
+      else if (eventsListeners[event]) {
+        eventsListeners[event].forEach((eventHandler, index) => {
+          if (eventHandler === handler) eventsListeners[event].splice(index, 1);
+        });
+      }
+    });
+    return;
+  }
+
+  function $trigger(...args) {
+    if (!eventsListeners) return;
+    let events;
+    let data;
+    let context;
+    if (typeof args[0] === 'string' || Array.isArray(args[0])) {
+      events = args[0];
+      data = args.slice(1, args.length);
+      context = self;
+    } else {
+      events = args[0].events;
+      data = args[0].data;
+      context = args[0].context || self;
+    }
+
+    data.unshift(context);
+    const eventsArray = Array.isArray(events) ? events : events.split(' ');
+    eventsArray.forEach(event => {
+      if (eventsListeners && eventsListeners[event]) {
+        eventsListeners[event].forEach(eventHandler => {
+          // this 지정 후 실행
+          eventHandler.apply(context, data);
+        });
+      }
+    });
+    return;
+  }
+
+  return {
+    eventsListeners,
+    $on,
+    $off,
+    $trigger // 혹은 $emit으로 명하기도 함.
+  }
+}
+```
+
+- 호출 방법 : 호출방법은 기본적으로 plugin과 매우 유사하다. 하지만, tag내에서 inline으로 즉시 불러올 수는 없고, 반드시 setup에서 호출 후 return을 한 후에 사용이 가능하다.
+
+```vue
+<template></template>
+<script setup>
+	import useEventBus from 'PATH/bus.js';
+  // 구조분해할당
+  const { $on, $off, $trigger } = useEventBus();
+</script>
+```
+
+
 
 ## useHead
 
@@ -186,7 +295,31 @@ export default {
 
 - 공통으로 사용하는 설정, 객체 등을 적용하는 데 이용한다.
 
-```
+```javascript
+// ~/nuxt.config.ts
+import { defineNuxtConfig } from 'nuxt'
+
+// https://v3.nuxtjs.org/api/configuration/nuxt.config
+export default defineNuxtConfig({
+  modules: [
+    // 전역 import할 npm 모듈(패키지, 라이브러리)
+    [
+    '@pinia/nuxt',
+    {
+      // 전역 import
+      autoImports: [
+        'defineStore',
+        'storeToRefs'
+      ]
+    }
+    ]
+  ],
+  // 전역 css
+  css: [
+    '~/assets/css/soonsak.css',
+    '@fortawesome/fontawesome-svg-core/styles.css'
+  ],
+});
 
 ```
 
