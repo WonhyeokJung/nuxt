@@ -259,7 +259,7 @@ export default {
 
 ```vue
 <!-- layouts/default.vue -->
-<!-- 반드시 layouts에 설정할 필요는 없고, 원하는 곳에 설정 가능 -->
+<!-- 반드시 layouts에 설정할 필요는 없고, 원하는 곳에 설정 가능(app.vue 추천) -->
 <template>
   <Html>
     <Head>
@@ -285,7 +285,17 @@ export default {
 
 <!-- console 내 결과 -->
 <head>
+  <!-- index에 usehead({ title:'' }) 설정이 없다면 자동으로 파일명을 title로 인식-->
   <title>index - Site Title</title>
+</head>
+```
+
+그렇다면 pages에 `useHead({ title: 'profile pageeee' })`을 설정하고, app.vue에 위의 dynamic을 설정했다면 어떻게 될까?
+
+```vue
+<head>
+  <!-- 이처럼 %s 부분을 pages 컨텐츠가 덮어씌운다. -->
+	<title>profile pageeee - Site Title</title>
 </head>
 ```
 
