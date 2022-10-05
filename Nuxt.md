@@ -790,6 +790,110 @@ Nuxt는 기본적으로 SSR(Server-side Rendering)이므로 `window.document`가
 
 
 
+## Font Awesome 사용하기
+
+기존에 사용하던 cdn 등을 사용한 간단한 방식과는 다르게, 특정 패키지를 인스톨 후 플러그인을 작성해야한다. 이하 가이드는 `nuxt3` 전용이다.
+
+1. 패키지 인스톨
+   코어 패키지인 `@fortawersome/fontawesome-svg-core`를 인스톨 후 기타 사용할 예정인 아이콘들을 인스톨한다.
+
+   ```bash
+   npm i --save @fortawesome/vue-fontawesome@latest-3
+   ```
+
+2. 패키지 등록
+   `nuxt.config.ts`에 전역css로 등록하고, `plugins/fontawesome.js`파일을 생성하고 이하 내용을 작성한다.
+
+   ```javascript
+   // nuxt.config.ts
+   import { defineNuxtConfig } from 'nuxt'
+   
+   // https://v3.nuxtjs.org/api/configuration/nuxt.config
+   export default defineNuxtConfig({
+     // 전역 css
+     css: [
+       '@fortawesome/fontawesome-svg-core/styles.css'
+     ],
+   });
+   ```
+
+   ```javascript
+   // plugins/fontawesome.js
+   import { library, config } from '@fortawesome/fontawesome-svg-core';
+   import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
+   // 추가로 install한 패키지들을 import
+   import { fas } from '@fortawesome/free-solid-svg-icons';
+   import { far } from '@fortawesome/free-regular-svg-icons';
+   import { fab } from '@fortawesome/free-brands-svg-icons';
+   // This is important, we are going to let Nuxt worry about the CSS
+   config.autoAddCss = false
+   
+   // You can add your icons directly in this plugin. See other examples for how you
+   // can add other styles or just individual icons.
+   // 싱글아이콘 패키지 등록
+   library.add(fas, far, fab)
+   
+   export default defineNuxtPlugin((nuxtApp) => {
+     // font-awesome-icon이란 컴포넌트 생성
+     nuxtApp.vueApp.component('font-awesome-icon', FontAwesomeIcon, {})
+   });
+   ```
+
+3. template 내 사용
+   위에서 선언한 `font-awesome-icon`이란 태그를 사용하여 아이콘들을 불러온다.
+
+   ```vue
+   <template>
+     <div>
+       <font-awesome-icon icon="fa-solid fa-user-secret" />
+     </div>
+   </template>
+   
+   <template>
+     <div>
+       <!-- Reminder to bind the icon property with ":" -->
+       <font-awesome-icon :icon="['fas', 'user-secret']" />
+       <font-awesome-icon :icon="[true ? 'fa-solid' : 'fa-regular', 'fa-heart']" />
+   
+       <NuxtWelcome />
+     </div>
+   </template>
+   ```
+
+## Pinia 사용하기
+
+피니아의 사용 역시 nuxt 내에 등록이 필요하지만, font awesome보다는 훨씬 간단하다.
+
+1. 설치
+   `pinia`와 `@pinia/nuxt`를 설치한다.
+   ```bash
+   npm install pinia @pinia/nuxt
+   ```
+
+2. 모듈 등록
+   `nuxt.config.ts`내에 등록한다.
+   한가지 팁이 있다면, `autoImports: string[]`를 설정해주면 전역 import로 처리되어 `defineStore`,` storeToRefs` 등을 계속 import해 줄 필요가 없다.
+
+   ```javascript
+   import { defineNuxtConfig } from 'nuxt'
+   s
+   export default defineNuxtConfig({
+     modules: [
+       [
+       '@pinia/nuxt',
+       {
+         autoImports: [
+           'defineStore',
+           'storeToRefs'
+         ]
+       } // options
+       ] // @pinia/nuxt
+     ], // modules 끝
+   });
+   ```
+
+   
+
 
 # Vue
 
@@ -906,3 +1010,8 @@ Nuxt는 기본적으로 SSR(Server-side Rendering)이므로 `window.document`가
 </template>
 ```
 
+
+
+# 업데이트 기록
+
+- 2022.10.05 : pinia / font awesome 사용방법 추가
