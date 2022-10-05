@@ -118,6 +118,110 @@ export default {
 </script>
 ```
 
+## composables
+
+### 작성예정
+
+## route middleware
+
+라우트 미들웨어(Route Middleware)는 페이지나 레이아웃이 렌더링 되기 전에 호출되는 커스텀 훅(Hook)으로, `router.beforeEach`를 통한 페이지 접속시 인증 확인 등을 vue에 직접 작성하지 않고 간편하게 해결하게 도와준다.
+
+### 특징
+
+- 페이지를 호출할 때 작동하므로 라우트 미들웨어는 `pages/`내에서 선언하여 불러온다.
+- Nuxt2와는 달리 매개변수로 router의 `to`와 `from`만을 갖는다.
+- 상태 관리 라이브러리의 경우, Pinia는 pinia store를 import한 후, setup에서 사용하던 것과 동일하게 사용할 수 있다.
+
+### 선언
+
+선언방식은 크게 세 가지가 있는데, inline 방식 / middleware directory 내 정의 / plugins 내 정의 방식이 있다.
+
+1. inline
+   인라인 방식은 말 그대로, vue page에서 인라인으로 미들웨어를 작성하는 방식이다. 기본적으로 **pages 내 vue**에 작성해야 한다.
+
+   ```vue
+   <template></template>
+   <script setup>
+   	definePageMeta({
+     // This is an example of inline middleware
+     middleware: () => {
+       console.log('inline 미들웨어입니다.')
+       return false
+     }
+   });
+   </script>
+   ```
+
+2. middleware directory
+   **가장 추천하는**방식이며, middleware라는 디렉토리를 root폴더에 생성한 후, 그 하위에 파일을 작성한다.
+   파일명은 반드시 **kebab-case**여야 하며, `FILE_NAME.global.ts(js)`형식으로 작성한 경우 **따로 호출할 필요 없이** 어느 페이지에서나 작동한다.(글로벌 선언)
+
+   ```javascript
+   // global route middleware
+   // middleware/always-run.global.ts
+   // vue-router의 to, from을 기본 매개변수로 갖고 있다.
+   export default defineNuxtRouteMiddleware((to, from) => {
+     console.log('언제 어디서나 작동하고 있는 global middleware!');
+   });
+   ```
+
+   ```javascript
+   // name route middleware
+   // middleware/auth.js(js, ts 상관없음)
+   import { useUsersStore } from '~/stores/users';
+   
+   export default defineNuxtRouteMiddleware((to, from) => {
+     const usersStore = useUsersStore();
+     if (!usersStore.state.me) {
+       // route 반환
+       return '/profile';
+     }
+   });
+   ```
+
+   
+
+3. plugins 내 정의
+   **가장 비추천하는** 방식으로, 기타 플러그인들과 역할이 헷갈릴 수 있으며, named route middleware의 경우 정상작동하지 않는 경우가 있어 불편하다.
+
+   ```javascript
+   // plugins/middleware-test.js
+   export default defineNuxtPlugin(() => {
+     // global: true => global 선언
+     addRouteMiddleware('global-test', () => {
+       console.log('plugin을 통해 선언한 global middleware!');
+     }, { global: true });
+   	
+     // named
+     // addRouteMiddleware('named-test', () => {
+     //   console.log('plugin의 named middleware 작동');
+     // });
+   });
+   ```
+
+
+
+### 호출
+
+호출은 언급한 대로, `pages/` 내 vue page에서 호출하며, `global`의 경우에는 따로 호출하지 않아도 자동 작동한다.
+
+```vue
+<script setup>
+	definePageMeta({
+    middleware: 'auth'
+  });
+  // or 여러 미들웨어를 한번에 부르기도 가능하다.
+  definePageMeta({
+    middleware: ['auth', () => {
+      console.log('inline middleware');
+      return '/profile';
+    }];
+  });
+</script>
+```
+
+
+
 ## public
 
 변경되지 않을 파일들을 넣어두는 곳으로, 대표적으로 `favicon.ico` 등이 여기 들어가며, 자동 적용된다. 그 이외에 `public/favicon.ico` 등의 경로가 자동생성된다.
