@@ -122,7 +122,110 @@ export default {
 
 ### 작성예정
 
+각 페이지마다 필요한 store를 import 했어야 했다면, composables directory를 이용하면 전역 import를 한 효과를 얻을 수 있다.
+
 ## route middleware
+
+### 라우트 미들웨어 이전
+
+비로그인 사용자를 다른 라우트 주소로 이동시키는 경우를 생각해보자. 라우트 미들웨어가 없었을 땐, `app.vue`등에 [이벤트버스](#), [플러그인](#plugin) 등을 사용하여 사용자를 다른 라우트로 접속시켰다. 하지만 라우트 미들웨어가 등장하면서, 이와 같은 복잡한 코드는 필요없어졌다.
+
+event bus의 예시는 [utils](#utils)를 참고한다.
+
+```vue
+<script setup>
+  const { $on, $off, $trigger } = useNuxtApp();
+  // const { $on, $trigger } = useEventBus();
+  const loadingStatus = ref(true);
+  $on('startLoading', () => {
+      loadingStatus.value = true;
+  });
+
+  $on('endLoading', () => {
+    loadingStatus.value = false;
+  });
+	router.beforeEach((to, from, next) => {
+      $trigger('startLoading');
+      next();
+    });
+</script>
+```
+
+```javascript
+// plugins/event-triggers.js
+let eventsListeners = {};
+/**
+ *
+ * @param {string} events event name
+ * @param {function} handler event handler
+ * @param {boolean} priority priority
+ * @returns object
+ */
+function on(events, handler, priority) {
+  if (typeof handler !== 'function') return;
+  const method = priority ? 'unshift' : 'push';
+  events.split(' ').forEach(event => {
+    if (!eventsListeners[event]) eventsListeners[event] = [];
+    eventsListeners[event][method](handler);
+  });
+  return;
+}
+
+function off(events, handler) {
+  if (!eventsListeners) return;
+  events.split(' ').forEach(event => {
+    if (typeof handler === 'undefined') eventsListeners[event] = [];
+    else if (eventsListeners[event]) {
+      eventsListeners[event].forEach((eventHandler, index) => {
+        if (eventHandler === handler) eventsListeners[event].splice(index, 1);
+      });
+    }
+  });
+  return;
+}
+
+function trigger(...args) {
+  if (!eventsListeners) return;
+  let events;
+  let data;
+  let context;
+  // 여러개 동시 시작시 trigger(['init', 'something'...])
+  if (typeof args[0] === 'string' || Array.isArray(args[0])) {
+    events = args[0];
+    data = args.slice(1, args.length);
+    context = eventsListeners;
+  } else {
+    events = args[0].events;
+    data = args[0].data;
+    context = args[0].context || eventsListeners;
+  }
+
+  data.unshift(context);
+  const eventsArray = Array.isArray(events) ? events : events.split(' ');
+  eventsArray.forEach(event => {
+    if (eventsListeners && eventsListeners[event]) {
+      eventsListeners[event].forEach(eventHandler => {
+        // this 지정 후 실행
+        eventHandler.apply(context, data);
+      });
+    }
+  });
+  return;
+}
+
+export default defineNuxtPlugin((/* nuxtApp */) => {
+  return {
+    provide: {
+      eventsListeners,
+      on,
+      off,
+      trigger
+    }
+  }
+});
+```
+
+### 개요
 
 라우트 미들웨어(Route Middleware)는 페이지나 레이아웃이 렌더링 되기 전에 호출되는 커스텀 훅(Hook)으로, `router.beforeEach`를 통한 페이지 접속시 인증 확인 등을 vue에 직접 작성하지 않고 간편하게 해결하게 도와준다.
 
@@ -239,9 +342,13 @@ export default {
 
 ## utils
 
+> 되도록이면 [Composables](#Composables)를 사용할 것!
+
 특정 기능을 수행하는 JS function들을 담는 디렉토리이다. 주로 여러 컴포넌트에서 반복적으로 사용하게 될 **비API** 함수가 있는 경우 utils에 담게 된다.
 
 `Composables`와 비슷하며  Composables가 template 등의 화면 구성 요소 + 컴포넌트 내 특정 변수의 전달도 수행한다면, utils는 단순히 특정 기능을 수행하는 함수들의 구성에 치중한다고 볼 수 있다. Vue3 / Nuxt3에서는 Composition API로도 작성이 가능하다.
+
+하지만 Composables가 나오면서 사실상 utils를 활용할 경우는 극한되었다고 볼 수 있으며, 대부분의 코드가 composables에서 대체가 가능하다.
 
 ### 예시
 
@@ -646,7 +753,8 @@ export default defineNuxtConfig({
    npm run lint
    ```
    
-   
+
+
 
 ## 상태 관리 라이브러리의 적용
 
