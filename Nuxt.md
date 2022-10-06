@@ -126,108 +126,11 @@ export default {
 
 ## route middleware
 
-### 라우트 미들웨어 이전
-
-비로그인 사용자를 다른 라우트 주소로 이동시키는 경우를 생각해보자. 라우트 미들웨어가 없었을 땐, `app.vue`등에 [이벤트버스](#), [플러그인](#plugin) 등을 사용하여 사용자를 다른 라우트로 접속시켰다. 하지만 라우트 미들웨어가 등장하면서, 이와 같은 복잡한 코드는 필요없어졌다.
-
-event bus의 예시는 [utils](#utils)를 참고한다.
-
-```vue
-<script setup>
-  const { $on, $off, $trigger } = useNuxtApp();
-  // const { $on, $trigger } = useEventBus();
-  const loadingStatus = ref(true);
-  $on('startLoading', () => {
-      loadingStatus.value = true;
-  });
-
-  $on('endLoading', () => {
-    loadingStatus.value = false;
-  });
-	router.beforeEach((to, from, next) => {
-      $trigger('startLoading');
-      next();
-    });
-</script>
-```
-
-```javascript
-// plugins/event-triggers.js
-let eventsListeners = {};
-/**
- *
- * @param {string} events event name
- * @param {function} handler event handler
- * @param {boolean} priority priority
- * @returns object
- */
-function on(events, handler, priority) {
-  if (typeof handler !== 'function') return;
-  const method = priority ? 'unshift' : 'push';
-  events.split(' ').forEach(event => {
-    if (!eventsListeners[event]) eventsListeners[event] = [];
-    eventsListeners[event][method](handler);
-  });
-  return;
-}
-
-function off(events, handler) {
-  if (!eventsListeners) return;
-  events.split(' ').forEach(event => {
-    if (typeof handler === 'undefined') eventsListeners[event] = [];
-    else if (eventsListeners[event]) {
-      eventsListeners[event].forEach((eventHandler, index) => {
-        if (eventHandler === handler) eventsListeners[event].splice(index, 1);
-      });
-    }
-  });
-  return;
-}
-
-function trigger(...args) {
-  if (!eventsListeners) return;
-  let events;
-  let data;
-  let context;
-  // 여러개 동시 시작시 trigger(['init', 'something'...])
-  if (typeof args[0] === 'string' || Array.isArray(args[0])) {
-    events = args[0];
-    data = args.slice(1, args.length);
-    context = eventsListeners;
-  } else {
-    events = args[0].events;
-    data = args[0].data;
-    context = args[0].context || eventsListeners;
-  }
-
-  data.unshift(context);
-  const eventsArray = Array.isArray(events) ? events : events.split(' ');
-  eventsArray.forEach(event => {
-    if (eventsListeners && eventsListeners[event]) {
-      eventsListeners[event].forEach(eventHandler => {
-        // this 지정 후 실행
-        eventHandler.apply(context, data);
-      });
-    }
-  });
-  return;
-}
-
-export default defineNuxtPlugin((/* nuxtApp */) => {
-  return {
-    provide: {
-      eventsListeners,
-      on,
-      off,
-      trigger
-    }
-  }
-});
-```
-
 ### 개요
 
-라우트 미들웨어(Route Middleware)는 페이지나 레이아웃이 렌더링 되기 전에 호출되는 커스텀 훅(Hook)으로, `router.beforeEach`를 통한 페이지 접속시 인증 확인 등을 vue에 직접 작성하지 않고 간편하게 해결하게 도와준다.
+라우트 미들웨어(Route Middleware)는 페이지나 레이아웃이 렌더링 되기 전에 호출되는 커스텀 훅(Hook)으로, 비로그인시 특정 페이지로 이동 등의 기능을 쉽게 구현할 수 있게 도와준다.
+
+MVC 구조에 빗대어 설명하자면, View와 Model 사이에서 데이터와 화면을 연결해주던 컨트롤러의 역할과 비슷하게, 화면의 렌더링 전에 데이터를 확인 후 그 결과에 맞는 라우트로의 이동을 해준다고 볼 수 있다.
 
 ### 특징
 
@@ -322,6 +225,52 @@ export default defineNuxtPlugin((/* nuxtApp */) => {
   });
 </script>
 ```
+
+참고로 **호출 순서**는, `middleware directory -> plugins directory -> inline(vue이므로 가장 늦다.)` 순으로 호출된다.
+
+### 활용
+
+기존에 `app.vue`에서 비로그인을 했다고 가정해보자. middleware, inline 그리고 app.vue 중 어떤 쪽의 라우터가 먼저 호출될까?
+
+```vue
+<script setup>
+  import { useUsersStore } from '~/stores/users';
+	// app.vue
+  const usersStore = useUsersStore();
+  if (!usersStore.state.me) {
+    // router.push({ name: 'intro' });
+    router.replace('/intro');
+  }
+</script>
+```
+
+```vue
+<script setup>
+	// pages/index.vue
+  definePageMeta({
+    middleware: () => { console.log('inline') }
+  })
+</script>
+```
+
+```javascript
+// middlewares/auth.js
+import { useUsersStore } from '~/stores/users'
+export default defineNuxtRouteMiddleware((to, from) => {
+  const usersStore = useUsersStore();
+  if (!usersStore.state.me && to.path !== '/intro') {
+    return '/intro';
+  }
+});
+```
+
+정답은,
+
+1. Middleware directory 호출
+2. pages 내 Inline 호출
+3. app.vue 내 코드 호출
+
+이렇게 `app.vue`에서 코드를 호출하더라도, pages내에 선언된 middleware보다 늦게 호출되는 문제가 생기는데, 이는 app.vue 내의 코드는 결국 렌더링 중에 호출되기 때문이다. 따라서, 비로그인 등의 설정,혹은 다국어 지원시 해당 언어가 없을 때 특정 언어를 출력하는 로직 등을 구현할 때는 렌더링 전에 실행될 수 있도록 라우트 미들웨어 내에 구현하는 것이 좋다.
 
 
 
@@ -1227,3 +1176,4 @@ Nuxt는 기본적으로 SSR(Server-side Rendering)이므로 `window.document`가
 # 업데이트 기록
 
 - 2022.10.05 : pinia / font awesome 사용방법 추가
+- 2022.10.06 : Route Middleware
