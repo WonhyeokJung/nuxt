@@ -54,9 +54,38 @@
 ## pages
 
 - app.vue에 `<NuxtPage>`태그 작성시 하위에 들어가는 폴더명과 파일명이 라우팅 경로로 자동 지정됨.
-- index.vue는 홈페이지 역할을 한다.
+- index.vue는 홈페이지 역할을 한다.({ path: '/' })
 - Vue.js는 실제로는 페이지가 하나이지만 브라우저의 히스토리 API를 이용해서 컴포넌트를 바꿔치기 하는 방식이었다면(url 변경으로 바꿔치기), Nuxt는 진짜로 pages 내의 컴포넌트가 하나의 개별적인 페이지이다.(코드 스플리팅)
 - 즉, 코드 스플리팅으로 인해 SSR 방식이 적용되었으며 Vue.js의 CSR처럼 파일을 전부 불러오는게 아닌 페이지별로 불러오게 된다. CSR의 새 페이지 로딩시 페이지 깜빡임 등을 방지하기 위해 다음에 옮겨갈 페이지들을 미리 가져오는 기능도 적용되어 있다.
+
+### dynamic routes
+
+nuxt3의 Dynamic Routes는 `대괄호[]`를 이용하여 설계한다.
+
+```
+pages/
+	[user]/
+		post/
+			[id].vue
+```
+
+위처럼 설계된 pages 컴포넌트가 있다고 가정하자. 위 컴포넌트는 아래와 같은 구조를 가지게 된다.
+
+- route.name = 'user-post-id'
+- url = '/:user/post/:id' `예시 : localhost:3000/jamesbond/post/13324567081`
+
+더불어, 중첩 라우트(nested routes)를 고려하여 이와 같이 설계해도 같은 방식으로 동작한다.
+
+```
+pages/
+	[user]/
+		post/
+			[id]/
+				index.vue // === [id].vue
+				something.vue
+```
+
+
 
 ## layouts
 
