@@ -955,6 +955,7 @@ Nuxt는 기본적으로 SSR(Server-side Rendering)이므로 `window.document`가
    <script setup>
      onMounted(() => {
        import('something');
+       console.log(window);
      })
    </script>
    ```
